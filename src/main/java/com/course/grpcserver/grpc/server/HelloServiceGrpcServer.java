@@ -21,11 +21,12 @@ public class HelloServiceGrpcServer extends HelloServiceGrpc.HelloServiceImplBas
 
     @Override
     public void sayHello(SayHelloRequest request, StreamObserver<SayHelloResponse> responseObserver) {
-        var name = request.getName();
-        var message = helloService.generateHello(name);
+        // TODO: Retrieve the name from the request and generate the message using the helloService
+        // var name = request....
+        // var message = helloService.generateHello(name);
 
         var response = SayHelloResponse.newBuilder()
-                .setGreet(message)
+                // TODO: Set the generated message in the response
                 .build();
 
         responseObserver.onNext(response);
