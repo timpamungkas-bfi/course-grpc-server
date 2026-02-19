@@ -3,6 +3,12 @@ spring:
     name: grpcserver
   main:
     banner-mode: off
+  grpc:
+    server:
+      health:
+        enabled: true
+      reflection:
+        enabled: true
 
 logging:
   pattern:
