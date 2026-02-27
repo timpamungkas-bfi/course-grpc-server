@@ -24,23 +24,19 @@ public class MyServerInterceptor implements ServerInterceptor {
     @Override
     public <ReqT, RespT> Listener<ReqT> interceptCall(
             ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
-
-        // Mutable Metadata holder placed in Context so the RPC handler can populate it;
-        // this interceptor merges it into the response headers when gRPC is about to send them.
-        Metadata gammaMetadata = new Metadata();
-        Context ctx = Context.current()
-                .withValue(GrpcContextKeyConstants.CONTEXT_KEY_GAMMA_HOLDER, gammaMetadata);
+        var gammaMetadata = new Metadata();
+        var newContext = Context.current()
+                .withValue(GrpcContextKeyConstants.CONTEXT_KEY_GAMMA, gammaMetadata);
 
         ServerCall<ReqT, RespT> wrappedCall = new ForwardingServerCall.SimpleForwardingServerCall<>(call) {
             @Override
             public void sendHeaders(Metadata responseHeaders) {
-                log.info("[MyServerInterceptor] merging gamma metadata into response headers");
                 responseHeaders.merge(gammaMetadata);
                 super.sendHeaders(responseHeaders);
             }
         };
 
-        return Contexts.interceptCall(ctx, wrappedCall, headers, next);
+        return Contexts.interceptCall(newContext, wrappedCall, headers, next);
     }
 
 }
