@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import com.course.central.proto.hello.Hello.SayHelloRequest;
 import com.course.central.proto.hello.Hello.SayHelloResponse;
 import com.course.central.proto.hello.HelloServiceGrpc;
-import com.course.grpcserver.grpc.context.GrpcKeyConstants;
+import com.course.grpcserver.grpc.constant.GrpcKeyConstants;
 import com.course.grpcserver.service.HelloService;
 
 import io.grpc.stub.StreamObserver;
