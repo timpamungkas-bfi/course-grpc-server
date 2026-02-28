@@ -3,7 +3,7 @@ package com.course.grpcserver.grpc.interceptor;
 import org.springframework.grpc.server.GlobalServerInterceptor;
 import org.springframework.stereotype.Component;
 
-import com.course.grpcserver.grpc.context.GrpcContextKeyConstants;
+import com.course.grpcserver.grpc.context.GrpcKeyConstants;
 
 import io.grpc.Context;
 import io.grpc.Contexts;
@@ -26,7 +26,7 @@ public class MyServerInterceptor implements ServerInterceptor {
             ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
         var gammaMetadata = new Metadata();
         var newContext = Context.current()
-                .withValue(GrpcContextKeyConstants.CONTEXT_KEY_GAMMA, gammaMetadata);
+                .withValue(GrpcKeyConstants.CONTEXT_KEY_GAMMA, gammaMetadata);
 
         var wrappedCall = new ForwardingServerCall.SimpleForwardingServerCall<>(call) {
             @Override

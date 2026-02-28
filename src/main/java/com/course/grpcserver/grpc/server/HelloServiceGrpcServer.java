@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import com.course.central.proto.hello.Hello.SayHelloRequest;
 import com.course.central.proto.hello.Hello.SayHelloResponse;
 import com.course.central.proto.hello.HelloServiceGrpc;
-import com.course.grpcserver.grpc.context.GrpcContextKeyConstants;
+import com.course.grpcserver.grpc.context.GrpcKeyConstants;
 import com.course.grpcserver.service.HelloService;
 
 import io.grpc.stub.StreamObserver;
@@ -47,9 +47,9 @@ public class HelloServiceGrpcServer extends HelloServiceGrpc.HelloServiceImplBas
         var thisIsForGamma = "This is for gamma";
 
         // Expose thisIsForGamma as response metadata via the interceptor's Metadata holder
-        var gammaMetadata = GrpcContextKeyConstants.CONTEXT_KEY_GAMMA.get();
+        var gammaMetadata = GrpcKeyConstants.CONTEXT_KEY_GAMMA.get();
         if (gammaMetadata != null) {
-            gammaMetadata.put(GrpcContextKeyConstants.METADATA_KEY_GAMMA_CONTEXT, thisIsForGamma);
+            gammaMetadata.put(GrpcKeyConstantsTA_KEY_GAMMA_CONTEXT, thisIsForGamma);
         }
 
         var message = helloService.generateHello(name);
