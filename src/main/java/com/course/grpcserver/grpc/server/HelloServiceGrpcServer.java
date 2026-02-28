@@ -49,7 +49,7 @@ public class HelloServiceGrpcServer extends HelloServiceGrpc.HelloServiceImplBas
         // Expose thisIsForGamma as response metadata via the interceptor's Metadata holder
         var gammaMetadata = GrpcKeyConstants.CONTEXT_KEY_GAMMA.get();
         if (gammaMetadata != null) {
-            gammaMetadata.put(GrpcKeyConstantsTA_KEY_GAMMA_CONTEXT, thisIsForGamma);
+            gammaMetadata.put(GrpcKeyConstants.METADATA_KEY_GAMMA_CONTEXT, thisIsForGamma);
         }
 
         var message = helloService.generateHello(name);
