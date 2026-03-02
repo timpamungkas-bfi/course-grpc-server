@@ -11,6 +11,7 @@ import com.course.central.proto.hello.HelloServiceGrpc;
 import com.course.grpcserver.grpc.constant.GrpcKeyConstants;
 import com.course.grpcserver.service.HelloService;
 
+import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 
 @Service
