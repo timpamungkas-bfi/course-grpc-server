@@ -31,7 +31,10 @@ public class GrpcserverApplication implements CommandLineRunner {
 		TimeUnit.SECONDS.sleep(5);
 
 		var response = clientHelloService.sayClientStreamingHello(List.of("Bruce Wayne", "Dick Grayson", "Tim Drake"));
-		log.info("Response: {}", response.getGreet());
+
+		if (response != null) {
+			log.info("Response: {}", response.getGreet());
+		}
 	}
 
 }
