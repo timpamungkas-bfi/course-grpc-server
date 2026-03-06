@@ -94,4 +94,32 @@ public class HelloServiceGrpcServer extends HelloServiceGrpc.HelloServiceImplBas
         };
     }
 
+    @Override
+    public StreamObserver<SayHelloRequest> sayHelloContinuous(StreamObserver<SayHelloResponse> responseObserver) {
+        return new StreamObserver<SayHelloRequest>() {
+
+            @Override
+            public void onNext(SayHelloRequest request) {
+                var name = request.getName();
+                var message = helloService.generateHello(name);
+
+                var response = SayHelloResponse.newBuilder()
+                        .setGreet(message)
+                        .build();
+
+                responseObserver.onNext(response);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                responseObserver.onError(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                responseObserver.onCompleted();
+            }
+        };
+    }
+
 }
