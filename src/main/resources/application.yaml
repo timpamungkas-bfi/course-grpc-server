@@ -25,6 +25,16 @@ armeria:
       protocols:
         - HTTP
 
+# Armeria HTTP server — exposes gRPC services as REST/JSON
+# Unary methods are reachable via:
+#   POST http://localhost:8080/<package>.<Service>/<Method>
+#   Content-Type: application/json
+armeria:
+  ports:
+    - port: 8080
+      protocols:
+        - HTTP
+
 logging:
   level:
     io.grpc.netty: WARN
