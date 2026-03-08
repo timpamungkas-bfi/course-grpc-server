@@ -1,14 +1,8 @@
 package com.course.grpcserver;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import com.course.grpcserver.grpc.client.service.ClientHelloService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,18 +14,8 @@ public class GrpcserverApplication implements CommandLineRunner {
 		SpringApplication.run(GrpcserverApplication.class, args);
 	}
 
-	private ClientHelloService clientHelloService;
-
-	public GrpcserverApplication(@Autowired ClientHelloService clientHelloService) {
-		this.clientHelloService = clientHelloService;
-	}
-
 	@Override
 	public void run(String... args) throws Exception {
-		TimeUnit.SECONDS.sleep(5);
-
-		clientHelloService.sayBidirectionalStreamingHello(
-				List.of("Harvey Dent", "Oswald Cobblepot", "Edward Nygma"));
 	}
 
 }
