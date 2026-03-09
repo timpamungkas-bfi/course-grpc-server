@@ -1,18 +1,12 @@
 package com.course.grpcserver.scheduler;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.course.grpcserver.entity.BankExchangeRate;
-import com.course.grpcserver.repository.BankExchangeRateRepository;
 import com.course.grpcserver.service.BankService;
 
 @Service
