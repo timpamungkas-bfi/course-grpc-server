@@ -6,10 +6,14 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.course.central.proto.bank.TransactionMessage.TransactionType;
 import com.course.grpcserver.entity.BankExchangeRate;
+import com.course.grpcserver.entity.BankTransaction;
 import com.course.grpcserver.repository.BankAccountRepository;
 import com.course.grpcserver.repository.BankExchangeRateRepository;
+import com.course.grpcserver.repository.BankTransactionRepository;
 import com.course.grpcserver.service.BankService;
 
 @Service
@@ -17,11 +21,14 @@ public class BankServiceImpl implements BankService {
 
     private BankAccountRepository bankAccountRepository;
     private BankExchangeRateRepository bankExchangeRateRepository;
+    private BankTransactionRepository bankTransactionRepository;
 
     public BankServiceImpl(@Autowired BankAccountRepository bankAccountRepository,
-            @Autowired BankExchangeRateRepository bankExchangeRateRepository) {
+            @Autowired BankExchangeRateRepository bankExchangeRateRepository,
+            @Autowired BankTransactionRepository bankTransactionRepository) {
         this.bankAccountRepository = bankAccountRepository;
         this.bankExchangeRateRepository = bankExchangeRateRepository;
+        this.bankTransactionRepository = bankTransactionRepository;
     }
 
     @Override
@@ -55,6 +62,36 @@ public class BankServiceImpl implements BankService {
         var exchangeRate = bankExchangeRateRepository.findExchangeRateAtTimeStamp(fromCurrency, toCurrency, timestamp);
 
         return exchangeRate != null ? exchangeRate.getRate().doubleValue() : 0.0;
+    }
+
+    @Override
+    @Transactional
+    public void createTransaction(String accountNumber, TransactionType type, double amount) {
+        var account = bankAccountRepository.findByAccountNumber(accountNumber);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found: " + accountNumber);
+        }
+
+        var now = OffsetDateTime.now();
+        var transaction = BankTransaction.builder()
+                .transactionUuid(UUID.randomUUID())
+                .accountUuid(account.getAccountUuid())
+                .transactionTimestamp(now)
+                .amount(new BigDecimal(amount))
+                .transactionType(type.name())
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        bankTransactionRepository.save(transaction);
+
+        var adjustedAmount = new BigDecimal(amount);
+        if (type == TransactionType.TRANSACTION_TYPE_OUT) {
+            adjustedAmount = adjustedAmount.negate();
+        }
+
+        var newBalance = account.getCurrentBalance().add(adjustedAmount);
+        bankAccountRepository.updateCurrentBalance(account.getAccountUuid(), newBalance, now);
     }
 
 }
