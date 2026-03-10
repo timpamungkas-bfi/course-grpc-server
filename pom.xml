@@ -43,6 +43,24 @@
 			<groupId>org.springframework.grpc</groupId>
 			<artifactId>spring-grpc-server-spring-boot-starter</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.grpc</groupId>
+			<artifactId>spring-grpc-client-spring-boot-starter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -58,12 +76,6 @@
 			<groupId>org.springframework.grpc</groupId>
 			<artifactId>spring-grpc-test</artifactId>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.course</groupId>
-			<artifactId>course-proto-central</artifactId>
-			<version>d2f0b10e58d22014c623047c49607ddcfe9073e7</version>
 		</dependency>
 
 		<dependency>
@@ -142,10 +154,4 @@
 		</plugins>
 	</build>
 
-	<repositories>
-		<repository>
-			<id>github</id>
-			<url>https://maven.pkg.github.com/timpamungkas/course-proto-central</url>
-		</repository>
-	</repositories>
 </project>

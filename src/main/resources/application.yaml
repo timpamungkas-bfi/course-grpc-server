@@ -9,6 +9,18 @@ spring:
         enabled: true
       reflection:
         enabled: true
+    client:
+      channels:
+        default-channel:
+          address: "localhost:9090"
+          negotiation-type: plaintext
+  datasource:
+    url: jdbc:h2:file:./grpc.h2.db;AUTO_SERVER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true     
 
 # Armeria HTTP server — exposes gRPC services as REST/JSON
 # Unary methods are reachable via:
