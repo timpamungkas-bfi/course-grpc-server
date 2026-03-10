@@ -92,7 +92,11 @@ public class BankServiceImpl implements BankService {
         }
 
         var newBalance = account.getCurrentBalance().add(adjustedAmount);
-        bankAccountRepository.updateCurrentBalance(account.getAccountUuid(), newBalance, now);
+        int updatedRows = bankAccountRepository.updateCurrentBalance(account.getAccountUuid(), newBalance);
+
+        if (updatedRows == 0) {
+            throw new IllegalStateException("Failed to update balance for account: " + accountNumber);
+        }
     }
 
 }
