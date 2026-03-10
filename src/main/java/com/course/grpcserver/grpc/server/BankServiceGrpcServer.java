@@ -14,6 +14,9 @@ import com.course.central.proto.bank.AccountMessage.GetCurrentBalanceResponse;
 import com.course.central.proto.bank.BankServiceGrpc;
 import com.course.central.proto.bank.ExchangeRateMessage.FetchExchangeRateRequest;
 import com.course.central.proto.bank.ExchangeRateMessage.FetchExchangeRateResponse;
+import com.course.central.proto.bank.TransactionMessage.TransactionRequest;
+import com.course.central.proto.bank.TransactionMessage.TransactionSummaryResponse;
+import com.course.central.proto.bank.TransactionMessage.TransactionType;
 import com.course.grpcserver.service.BankService;
 import com.google.type.Date;
 
@@ -83,6 +86,63 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
         if (serverCallObserver.isCancelled()) {
             log.info("Client cancelled the request");
         }
+    }
+
+    @Override
+    public StreamObserver<TransactionRequest> summarizeTransactions(
+            StreamObserver<TransactionSummaryResponse> responseObserver) {
+
+        return new StreamObserver<TransactionRequest>() {
+
+            private String accountNumber = "";
+            private double sumAmountIn = 0;
+            private double sumAmountOut = 0;
+            private final LocalDate transactionDate = LocalDate.now();
+
+            @Override
+            public void onNext(TransactionRequest request) {
+                accountNumber = request.getAccountNumber();
+                var type = request.getType();
+                var amount = request.getAmount();
+
+                try {
+                    bankService.createTransaction(accountNumber, type, amount);
+                } catch (Exception e) {
+                    log.error("Failed to create transaction: {}", e.getMessage());
+                }
+
+                if (type == TransactionType.TRANSACTION_TYPE_IN) {
+                    sumAmountIn += amount;
+                } else if (type == TransactionType.TRANSACTION_TYPE_OUT) {
+                    sumAmountOut += amount;
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.error("Error while reading from client: {}", t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                var today = Date.newBuilder()
+                        .setYear(transactionDate.getYear())
+                        .setMonth(transactionDate.getMonthValue())
+                        .setDay(transactionDate.getDayOfMonth())
+                        .build();
+
+                var response = TransactionSummaryResponse.newBuilder()
+                        .setAccountNumber(accountNumber)
+                        .setSumAmountIn(sumAmountIn)
+                        .setSumAmountOut(sumAmountOut)
+                        .setSumTotal(sumAmountIn - sumAmountOut)
+                        .setTransactionDate(today)
+                        .build();
+
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        };
     }
 
 }
