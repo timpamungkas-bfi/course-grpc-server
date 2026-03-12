@@ -22,6 +22,7 @@ import com.course.central.proto.bank.TransferMessage.TransferRequest;
 import com.course.central.proto.bank.TransferMessage.TransferResponse;
 import com.course.central.proto.bank.TransferMessage.TransferStatus;
 import com.course.grpcserver.exception.AccountNotFoundException;
+import com.course.grpcserver.exception.InsufficientFundException;
 import com.course.grpcserver.exception.InvalidExchangeRateException;
 import com.course.grpcserver.service.BankService;
 import com.google.protobuf.Any;
@@ -146,6 +147,35 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                     }
                 } catch (Exception e) {
                     log.error("Failed to create transaction: {}", e.getMessage());
+
+                    var badRequest = switch (e) {
+                        case AccountNotFoundException ae -> BadRequest.newBuilder()
+                                .addFieldViolations(BadRequest.FieldViolation.newBuilder()
+                                        .setField("account_number")
+                                        .setDescription(ae.getMessage())
+                                        .build())
+                                .build();
+                        case InsufficientFundException ife -> BadRequest.newBuilder()
+                                .addFieldViolations(BadRequest.FieldViolation.newBuilder()
+                                        .setField("amount")
+                                        .setDescription(ife.getMessage())
+                                        .build())
+                                .build();
+                        default -> BadRequest.newBuilder()
+                                .addFieldViolations(BadRequest.FieldViolation.newBuilder()
+                                        .setField("transaction")
+                                        .setDescription(e.getMessage())
+                                        .build())
+                                .build();
+                    };
+
+                    var errorStatus = com.google.rpc.Status.newBuilder()
+                            .setCode(Status.FAILED_PRECONDITION.getCode().value())
+                            .setMessage("Transaction failed")
+                            .addDetails(Any.pack(badRequest))
+                            .build();
+
+                    responseObserver.onError(StatusProto.toStatusRuntimeException(errorStatus));
                 }
             }
 

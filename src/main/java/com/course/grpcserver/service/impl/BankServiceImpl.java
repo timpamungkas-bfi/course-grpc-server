@@ -13,6 +13,7 @@ import com.course.grpcserver.entity.BankExchangeRate;
 import com.course.grpcserver.entity.BankTransaction;
 import com.course.grpcserver.entity.BankTransfer;
 import com.course.grpcserver.exception.AccountNotFoundException;
+import com.course.grpcserver.exception.InsufficientFundException;
 import com.course.grpcserver.exception.InvalidExchangeRateException;
 import com.course.grpcserver.repository.BankAccountRepository;
 import com.course.grpcserver.repository.BankExchangeRateRepository;
@@ -83,7 +84,7 @@ public class BankServiceImpl implements BankService {
     public void createTransaction(String accountNumber, TransactionType type, double amount, String notes) {
         var account = bankAccountRepository.findByAccountNumber(accountNumber);
         if (account == null) {
-            throw new IllegalArgumentException("Account not found: " + accountNumber);
+            throw new AccountNotFoundException(accountNumber);
         }
 
         var now = OffsetDateTime.now();
@@ -102,6 +103,10 @@ public class BankServiceImpl implements BankService {
 
         var adjustedAmount = new BigDecimal(amount);
         if (type == TransactionType.TRANSACTION_TYPE_OUT) {
+            if (account.getCurrentBalance().compareTo(adjustedAmount) < 0) {
+                throw new InsufficientFundException(amount);
+            }
+
             adjustedAmount = adjustedAmount.negate();
         }
 
