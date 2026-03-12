@@ -13,6 +13,8 @@ import com.course.grpcserver.entity.BankExchangeRate;
 import com.course.grpcserver.entity.BankTransaction;
 import com.course.grpcserver.entity.BankTransfer;
 import com.course.grpcserver.exception.AccountNotFoundException;
+import com.course.grpcserver.exception.InsufficientFundException;
+import com.course.grpcserver.exception.InvalidExchangeRateException;
 import com.course.grpcserver.repository.BankAccountRepository;
 import com.course.grpcserver.repository.BankExchangeRateRepository;
 import com.course.grpcserver.repository.BankTransactionRepository;
@@ -70,8 +72,11 @@ public class BankServiceImpl implements BankService {
     @Override
     public double findExchangeRateAtTimeStamp(String fromCurrency, String toCurrency, OffsetDateTime timestamp) {
         var exchangeRate = bankExchangeRateRepository.findExchangeRateAtTimeStamp(fromCurrency, toCurrency, timestamp);
+        if (exchangeRate == null) {
+            throw new InvalidExchangeRateException(fromCurrency, toCurrency);
+        }
 
-        return exchangeRate != null ? exchangeRate.getRate().doubleValue() : 0.0;
+        return exchangeRate.getRate().doubleValue();
     }
 
     @Override
@@ -79,7 +84,7 @@ public class BankServiceImpl implements BankService {
     public void createTransaction(String accountNumber, TransactionType type, double amount, String notes) {
         var account = bankAccountRepository.findByAccountNumber(accountNumber);
         if (account == null) {
-            throw new IllegalArgumentException("Account not found: " + accountNumber);
+            throw new AccountNotFoundException(accountNumber);
         }
 
         var now = OffsetDateTime.now();
@@ -98,6 +103,10 @@ public class BankServiceImpl implements BankService {
 
         var adjustedAmount = new BigDecimal(amount);
         if (type == TransactionType.TRANSACTION_TYPE_OUT) {
+            if (account.getCurrentBalance().compareTo(adjustedAmount) < 0) {
+                throw new InsufficientFundException(amount);
+            }
+
             adjustedAmount = adjustedAmount.negate();
         }
 
