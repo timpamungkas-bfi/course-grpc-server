@@ -12,6 +12,7 @@ import com.course.central.proto.bank.TransactionMessage.TransactionType;
 import com.course.grpcserver.entity.BankExchangeRate;
 import com.course.grpcserver.entity.BankTransaction;
 import com.course.grpcserver.entity.BankTransfer;
+import com.course.grpcserver.exception.AccountNotFoundException;
 import com.course.grpcserver.repository.BankAccountRepository;
 import com.course.grpcserver.repository.BankExchangeRateRepository;
 import com.course.grpcserver.repository.BankTransactionRepository;
@@ -40,7 +41,11 @@ public class BankServiceImpl implements BankService {
     public double findCurrentBalance(String accountNumber) {
         var account = bankAccountRepository.findByAccountNumber(accountNumber);
 
-        return account != null ? account.getCurrentBalance().doubleValue() : 0.0;
+        if (account == null) {
+            throw new AccountNotFoundException(accountNumber);
+        }
+
+        return account.getCurrentBalance().doubleValue();
     }
 
     @Override

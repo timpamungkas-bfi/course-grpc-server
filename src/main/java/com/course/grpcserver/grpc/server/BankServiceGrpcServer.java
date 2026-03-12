@@ -21,11 +21,13 @@ import com.course.central.proto.bank.TransactionMessage.TransactionType;
 import com.course.central.proto.bank.TransferMessage.TransferRequest;
 import com.course.central.proto.bank.TransferMessage.TransferResponse;
 import com.course.central.proto.bank.TransferMessage.TransferStatus;
+import com.course.grpcserver.exception.AccountNotFoundException;
 import com.course.grpcserver.service.BankService;
 import com.google.protobuf.Duration;
 import com.google.type.Date;
 import com.google.type.DateTime;
 
+import io.grpc.Status;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
@@ -43,22 +45,27 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
     @Override
     public void getCurrentBalance(GetCurrentBalanceRequest request,
             StreamObserver<GetCurrentBalanceResponse> responseObserver) {
-        var accountNumber = request.getAccountNumber();
-        var balance = bankService.findCurrentBalance(accountNumber);
-        var today = LocalDate.now();
-        var todayProto = Date.newBuilder()
-                .setYear(today.getYear())
-                .setMonth(today.getMonthValue())
-                .setDay(today.getDayOfMonth())
-                .build();
+        try {
+            var accountNumber = request.getAccountNumber();
+            var balance = bankService.findCurrentBalance(accountNumber);
+            var today = LocalDate.now();
+            var todayProto = Date.newBuilder()
+                    .setYear(today.getYear())
+                    .setMonth(today.getMonthValue())
+                    .setDay(today.getDayOfMonth())
+                    .build();
 
-        var response = GetCurrentBalanceResponse.newBuilder()
-                .setAmount(balance)
-                .setCurrentDate(todayProto)
-                .build();
+            var response = GetCurrentBalanceResponse.newBuilder()
+                    .setAmount(balance)
+                    .setCurrentDate(todayProto)
+                    .build();
 
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (AccountNotFoundException e) {
+            var errorResponse = Status.FAILED_PRECONDITION.withDescription(e.getMessage());
+            responseObserver.onError(errorResponse.asRuntimeException());
+        }
     }
 
     @Override
@@ -174,7 +181,7 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                 var transferSuccess = false;
 
                 try {
-                    transferUuid = bankService.createTransfer(fromAccountNumber, toAccountNumber, currency, amount);                    
+                    transferUuid = bankService.createTransfer(fromAccountNumber, toAccountNumber, currency, amount);
                     bankService.createTransactionPair(fromAccountNumber, toAccountNumber, amount, "Transfer");
                     transferSuccess = true;
                 } catch (Exception e) {
