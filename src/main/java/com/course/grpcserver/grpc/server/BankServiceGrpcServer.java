@@ -24,10 +24,17 @@ import com.course.central.proto.bank.TransferMessage.TransferStatus;
 import com.course.grpcserver.exception.AccountNotFoundException;
 import com.course.grpcserver.exception.InsufficientFundException;
 import com.course.grpcserver.exception.InvalidExchangeRateException;
+import com.course.grpcserver.exception.TransferDestinationAccountNotFoundException;
+import com.course.grpcserver.exception.TransferRecordFailedException;
+import com.course.grpcserver.exception.TransferSourceAccountNotFoundException;
+import com.course.grpcserver.exception.TransferTransactionPairException;
 import com.course.grpcserver.service.BankService;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
 import com.google.rpc.BadRequest;
+import com.google.rpc.ErrorInfo;
+import com.google.rpc.Help;
+import com.google.rpc.PreconditionFailure;
 import com.google.type.Date;
 import com.google.type.DateTime;
 
@@ -233,34 +240,28 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                 var amount = request.getAmount();
 
                 UUID transferUuid = null;
-                var transferSuccess = false;
-
                 try {
                     transferUuid = bankService.createTransfer(fromAccountNumber, toAccountNumber, currency, amount);
                     bankService.createTransactionPair(fromAccountNumber, toAccountNumber, amount, "Transfer");
-                    transferSuccess = true;
+                    bankService.updateTransferStatus(transferUuid, true);
+
+                    var response = TransferResponse.newBuilder()
+                            .setFromAccountNumber(fromAccountNumber)
+                            .setToAccountNumber(toAccountNumber)
+                            .setCurrency(currency)
+                            .setAmount(amount)
+                            .setStatus(TransferStatus.TRANSFER_STATUS_SUCCESS)
+                            .setTimestamp(currentDatetime())
+                            .build();
+
+                    responseObserver.onNext(response);
                 } catch (Exception e) {
                     log.error("Transfer failed: {}", e.getMessage());
+                    if (transferUuid != null) {
+                        bankService.updateTransferStatus(transferUuid, false);
+                    }
+                    responseObserver.onError(buildTransferErrorStatus(e, request));
                 }
-
-                if (transferUuid != null) {
-                    bankService.updateTransferStatus(transferUuid, transferSuccess);
-                }
-
-                var status = transferSuccess
-                        ? TransferStatus.TRANSFER_STATUS_SUCCESS
-                        : TransferStatus.TRANSFER_STATUS_FAILED;
-
-                var response = TransferResponse.newBuilder()
-                        .setFromAccountNumber(fromAccountNumber)
-                        .setToAccountNumber(toAccountNumber)
-                        .setCurrency(currency)
-                        .setAmount(amount)
-                        .setStatus(status)
-                        .setTimestamp(currentDatetime())
-                        .build();
-
-                responseObserver.onNext(response);
             }
 
             @Override
@@ -273,6 +274,75 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                 responseObserver.onCompleted();
             }
         };
+    }
+
+    private Throwable buildTransferErrorStatus(Exception e, TransferRequest request) {
+        com.google.rpc.Status errorStatus;
+
+        if (e instanceof TransferSourceAccountNotFoundException) {
+            var details = PreconditionFailure.newBuilder()
+                    .addViolations(PreconditionFailure.Violation.newBuilder()
+                            .setType("INVALID_ACCOUNT")
+                            .setSubject("Source account not found")
+                            .setDescription("source account (from " + request.getFromAccountNumber() + ") not found")
+                            .build())
+                    .build();
+
+            errorStatus = com.google.rpc.Status.newBuilder()
+                    .setCode(Status.FAILED_PRECONDITION.getCode().value())
+                    .setMessage(e.getMessage())
+                    .addDetails(Any.pack(details))
+                    .build();
+        } else if (e instanceof TransferDestinationAccountNotFoundException) {
+            var details = PreconditionFailure.newBuilder()
+                    .addViolations(PreconditionFailure.Violation.newBuilder()
+                            .setType("INVALID_ACCOUNT")
+                            .setSubject("Destination account not found")
+                            .setDescription("destination account (to " + request.getToAccountNumber() + ") not found")
+                            .build())
+                    .build();
+
+            errorStatus = com.google.rpc.Status.newBuilder()
+                    .setCode(Status.FAILED_PRECONDITION.getCode().value())
+                    .setMessage(e.getMessage())
+                    .addDetails(Any.pack(details))
+                    .build();
+        } else if (e instanceof TransferRecordFailedException) {
+            var details = Help.newBuilder()
+                    .addLinks(Help.Link.newBuilder()
+                            .setUrl("my-bank-website.com/faq")
+                            .setDescription("Bank FAQ")
+                            .build())
+                    .build();
+
+            errorStatus = com.google.rpc.Status.newBuilder()
+                    .setCode(Status.INTERNAL.getCode().value())
+                    .setMessage(e.getMessage())
+                    .addDetails(Any.pack(details))
+                    .build();
+        } else if (e instanceof TransferTransactionPairException) {
+            var details = ErrorInfo.newBuilder()
+                    .setDomain("my-bank-website.com")
+                    .setReason("TRANSACTION_PAIR_FAILED")
+                    .putMetadata("from_account", request.getFromAccountNumber())
+                    .putMetadata("to_account", request.getToAccountNumber())
+                    .putMetadata("currency", request.getCurrency())
+                    .putMetadata("amount", String.valueOf(request.getAmount()))
+                    .build();
+
+            errorStatus = com.google.rpc.Status.newBuilder()
+                    .setCode(Status.INVALID_ARGUMENT.getCode().value())
+                    .setMessage(e.getMessage())
+                    .addDetails(Any.pack(details))
+                    .build();
+        } else {
+            errorStatus = com.google.rpc.Status.newBuilder()
+                    .setCode(Status.UNKNOWN.getCode().value())
+                    .setMessage(e.getMessage())
+                    .build();
+        }
+
+        return StatusProto.toStatusRuntimeException(errorStatus);
     }
 
     private DateTime currentDatetime() {

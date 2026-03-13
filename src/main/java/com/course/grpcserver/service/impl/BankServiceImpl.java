@@ -15,6 +15,10 @@ import com.course.grpcserver.entity.BankTransfer;
 import com.course.grpcserver.exception.AccountNotFoundException;
 import com.course.grpcserver.exception.InsufficientFundException;
 import com.course.grpcserver.exception.InvalidExchangeRateException;
+import com.course.grpcserver.exception.TransferDestinationAccountNotFoundException;
+import com.course.grpcserver.exception.TransferRecordFailedException;
+import com.course.grpcserver.exception.TransferSourceAccountNotFoundException;
+import com.course.grpcserver.exception.TransferTransactionPairException;
 import com.course.grpcserver.repository.BankAccountRepository;
 import com.course.grpcserver.repository.BankExchangeRateRepository;
 import com.course.grpcserver.repository.BankTransactionRepository;
@@ -122,11 +126,16 @@ public class BankServiceImpl implements BankService {
     public UUID createTransfer(String fromAccountNumber, String toAccountNumber, String currency, double amount) {
         var fromAccount = bankAccountRepository.findByAccountNumber(fromAccountNumber);
         if (fromAccount == null) {
-            throw new IllegalArgumentException("From account not found: " + fromAccountNumber);
+            throw new TransferSourceAccountNotFoundException(fromAccountNumber);
         }
         var toAccount = bankAccountRepository.findByAccountNumber(toAccountNumber);
         if (toAccount == null) {
-            throw new IllegalArgumentException("To account not found: " + toAccountNumber);
+            throw new TransferDestinationAccountNotFoundException(toAccountNumber);
+        }
+
+        var amountDecimal = new BigDecimal(amount);
+        if (fromAccount.getCurrentBalance().compareTo(amountDecimal) < 0) {
+            throw new TransferTransactionPairException("Insufficient balance on source account: " + fromAccountNumber);
         }
 
         var now = OffsetDateTime.now();
@@ -135,14 +144,18 @@ public class BankServiceImpl implements BankService {
                 .fromAccountUuid(fromAccount.getAccountUuid())
                 .toAccountUuid(toAccount.getAccountUuid())
                 .currency(currency)
-                .amount(new BigDecimal(amount))
+                .amount(amountDecimal)
                 .transferTimestamp(now)
                 .transferSuccess(false)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
-        return bankTransferRepository.save(transfer).getTransferUuid();
+        try {
+            return bankTransferRepository.save(transfer).getTransferUuid();
+        } catch (Exception e) {
+            throw new TransferRecordFailedException();
+        }
     }
 
     @Override
@@ -150,12 +163,12 @@ public class BankServiceImpl implements BankService {
     public void createTransactionPair(String fromAccountNumber, String toAccountNumber, double amount, String notes) {
         var fromAccount = bankAccountRepository.findByAccountNumber(fromAccountNumber);
         if (fromAccount == null) {
-            throw new IllegalArgumentException("From account not found: " + fromAccountNumber);
+            throw new TransferTransactionPairException("Source account not found: " + fromAccountNumber);
         }
 
         var toAccount = bankAccountRepository.findByAccountNumber(toAccountNumber);
         if (toAccount == null) {
-            throw new IllegalArgumentException("To account not found: " + toAccountNumber);
+            throw new TransferTransactionPairException("Destination account not found: " + toAccountNumber);
         }
 
         var now = OffsetDateTime.now();
@@ -188,13 +201,13 @@ public class BankServiceImpl implements BankService {
         var fromNewBalance = fromAccount.getCurrentBalance().subtract(amountDecimal);
         var updatedFromAccountRows = bankAccountRepository.updateCurrentBalance(fromAccount.getAccountUuid(), fromNewBalance);
         if (updatedFromAccountRows != 1) {
-            throw new IllegalStateException("Failed to update balance for account: " + fromAccountNumber);
+            throw new TransferTransactionPairException("Failed to debit source account: " + fromAccountNumber);
         }
 
         var toNewBalance = toAccount.getCurrentBalance().add(amountDecimal);
         var updatedToAccountRows = bankAccountRepository.updateCurrentBalance(toAccount.getAccountUuid(), toNewBalance);
         if (updatedToAccountRows != 1) {
-            throw new IllegalStateException("Failed to update balance for account: " + toAccountNumber);
+            throw new TransferTransactionPairException("Failed to credit destination account: " + toAccountNumber);
         }
     }
 
