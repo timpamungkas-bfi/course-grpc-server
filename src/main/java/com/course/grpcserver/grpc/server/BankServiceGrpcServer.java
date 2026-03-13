@@ -113,6 +113,7 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                         .build();
 
                 responseObserver.onError(StatusProto.toStatusRuntimeException(errorStatus));
+                break;
             }
         }
 
@@ -129,9 +130,11 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
             private String accountNumber;
             private double sumAmountIn;
             private double sumAmountOut;
+            private boolean hasError = false;
 
             @Override
             public void onNext(TransactionRequest request) {
+                if (hasError) return;
                 accountNumber = request.getAccountNumber();
                 var type = request.getType();
                 var amount = request.getAmount();
@@ -176,6 +179,7 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                             .build();
 
                     responseObserver.onError(StatusProto.toStatusRuntimeException(errorStatus));
+                    hasError = true;
                 }
             }
 
@@ -186,6 +190,8 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
             @Override
             public void onCompleted() {
+                if (hasError) return;
+
                 var now = LocalDate.now();
 
                 var today = Date.newBuilder()
