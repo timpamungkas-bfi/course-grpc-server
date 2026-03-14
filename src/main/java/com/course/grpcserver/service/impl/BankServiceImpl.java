@@ -241,15 +241,17 @@ public class BankServiceImpl implements BankService {
             throw new InsufficientFundException(amount);
         }
 
+        var now = OffsetDateTime.now();
+
         var transaction = bankTransactionRepository.save(BankTransaction.builder()
                 .transactionUuid(UUID.randomUUID())
                 .accountUuid(fromAccount.getAccountUuid())
-                .transactionTimestamp(OffsetDateTime.now())
+                .transactionTimestamp(now)
                 .amount(amountDecimal)
                 .transactionType(TransactionType.TRANSACTION_TYPE_OUT.name())
                 .notes(String.format("Bill payment to %s with currency %s", billerCode, currency))
-                .createdAt(OffsetDateTime.now())
-                .updatedAt(OffsetDateTime.now())
+                .createdAt(now)
+                .updatedAt(now)
                 .build());
 
         return transaction.getTransactionUuid();

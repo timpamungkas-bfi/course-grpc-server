@@ -369,7 +369,6 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
     @Override
     public void payBill(PayBillRequest request, StreamObserver<PayBillResponse> responseObserver) {
-        System.out.println("Received PayBillRequest: " + request);
         var fromAccountNumber = request.getFromAccountNumber();
         var billerCode = request.getBillerCode();
         var currency = request.getCurrency();
