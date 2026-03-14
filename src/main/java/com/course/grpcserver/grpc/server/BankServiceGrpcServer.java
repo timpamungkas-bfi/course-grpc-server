@@ -260,7 +260,9 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                     if (transferUuid != null) {
                         bankService.updateTransferStatus(transferUuid, false);
                     }
-                    responseObserver.onError(buildTransferErrorStatus(e, request));
+
+                    var errorResponse = buildTransferErrorResponse(e, request);
+                    responseObserver.onError(errorResponse);
                 }
             }
 
@@ -276,7 +278,8 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
         };
     }
 
-    private Throwable buildTransferErrorStatus(Exception e, TransferRequest request) {
+    
+    private Throwable buildTransferErrorResponse(Exception e, TransferRequest request) {
         com.google.rpc.Status errorStatus;
 
         if (e instanceof TransferSourceAccountNotFoundException) {
@@ -344,6 +347,7 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
         return StatusProto.toStatusRuntimeException(errorStatus);
     }
+    
 
     private DateTime currentDatetime() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);
