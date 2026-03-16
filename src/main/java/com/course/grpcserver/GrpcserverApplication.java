@@ -42,7 +42,7 @@ public class GrpcserverApplication implements CommandLineRunner {
 		// demoUnaryCall();
 		// demoServerStreamingCall();
 		// demoClientStreamingCall();
-		demoBidirectionalStreamingCall();
+		// demoBidirectionalStreamingCall();
 	}
 
 	private void printExceptionStatus(String caller, Throwable e) {
