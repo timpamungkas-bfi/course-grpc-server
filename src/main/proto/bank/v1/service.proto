@@ -3,6 +3,7 @@ syntax = "proto3";
 package bank.v1;
 
 import "bank/v1/account_message.proto";
+import "bank/v1/billing_message.proto";
 import "bank/v1/exchange_rate_message.proto";
 import "bank/v1/transaction_message.proto";
 import "bank/v1/transfer_message.proto";
@@ -16,4 +17,6 @@ service BankService {
   rpc TransferMultiple(stream TransferRequest) returns (stream TransferResponse) {}
 
   rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse) {}
+
+  rpc PayBill(PayBillRequest) returns (PayBillResponse) {}
 }

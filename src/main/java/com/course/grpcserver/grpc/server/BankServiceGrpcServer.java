@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.grpc.server.service.GrpcService;
 import com.course.central.proto.bank.AccountMessage.GetCurrentBalanceRequest;
 import com.course.central.proto.bank.AccountMessage.GetCurrentBalanceResponse;
 import com.course.central.proto.bank.BankServiceGrpc;
+import com.course.central.proto.bank.BillingMessage.PayBillRequest;
+import com.course.central.proto.bank.BillingMessage.PayBillResponse;
 import com.course.central.proto.bank.ExchangeRateMessage.FetchExchangeRateRequest;
 import com.course.central.proto.bank.ExchangeRateMessage.FetchExchangeRateResponse;
 import com.course.central.proto.bank.TransactionMessage.TransactionRequest;
@@ -141,7 +144,8 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
             @Override
             public void onNext(TransactionRequest request) {
-                if (hasError) return;
+                if (hasError)
+                    return;
                 accountNumber = request.getAccountNumber();
                 var type = request.getType();
                 var amount = request.getAmount();
@@ -197,7 +201,8 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
             @Override
             public void onCompleted() {
-                if (hasError) return;
+                if (hasError)
+                    return;
 
                 var now = LocalDate.now();
 
@@ -283,7 +288,6 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
         };
     }
 
-    
     private Throwable buildTransferErrorResponse(Exception e, TransferRequest request) {
         com.google.rpc.Status errorStatus;
 
@@ -352,7 +356,6 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
 
         return StatusProto.toStatusRuntimeException(errorStatus);
     }
-    
 
     private DateTime currentDatetime() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -367,6 +370,25 @@ public class BankServiceGrpcServer extends BankServiceGrpc.BankServiceImplBase {
                 .setNanos(now.getNano())
                 .setUtcOffset(Duration.getDefaultInstance())
                 .build();
+    }
+
+    @Override
+    public void payBill(PayBillRequest request, StreamObserver<PayBillResponse> responseObserver) {
+        var fromAccountNumber = request.getFromAccountNumber();
+        var billerCode = request.getBillerCode();
+        var currency = request.getCurrency();
+        var paymentAmount = request.getPaymentAmount();
+
+        var transactionUuid = bankService.payBill(fromAccountNumber, billerCode, currency, paymentAmount);
+
+        var response = PayBillResponse.newBuilder()
+                .setPaymentId(transactionUuid.toString())
+                .setReferenceNumber("PAYMENT-REF-" + ThreadLocalRandom.current().nextInt(100000, 999999))
+                .setSuccess(true)
+                .build();
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
 }

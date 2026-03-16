@@ -12,8 +12,10 @@ import com.course.central.proto.bank.TransactionMessage.TransactionType;
 import com.course.grpcserver.entity.BankExchangeRate;
 import com.course.grpcserver.entity.BankTransaction;
 import com.course.grpcserver.entity.BankTransfer;
+import com.course.grpcserver.exception.AccountBlockedException;
 import com.course.grpcserver.exception.AccountNotFoundException;
 import com.course.grpcserver.exception.InsufficientFundException;
+import com.course.grpcserver.exception.InvalidBillerException;
 import com.course.grpcserver.exception.InvalidExchangeRateException;
 import com.course.grpcserver.exception.TransferDestinationAccountNotFoundException;
 import com.course.grpcserver.exception.TransferRecordFailedException;
@@ -199,7 +201,8 @@ public class BankServiceImpl implements BankService {
         bankTransactionRepository.save(toTransaction);
 
         var fromNewBalance = fromAccount.getCurrentBalance().subtract(amountDecimal);
-        var updatedFromAccountRows = bankAccountRepository.updateCurrentBalance(fromAccount.getAccountUuid(), fromNewBalance);
+        var updatedFromAccountRows = bankAccountRepository.updateCurrentBalance(fromAccount.getAccountUuid(),
+                fromNewBalance);
         if (updatedFromAccountRows != 1) {
             throw new TransferTransactionPairException("Failed to debit source account: " + fromAccountNumber);
         }
@@ -214,6 +217,44 @@ public class BankServiceImpl implements BankService {
     @Override
     public int updateTransferStatus(UUID transferUuid, boolean isSuccess) {
         return bankTransferRepository.updateTransferStatus(transferUuid, isSuccess);
+    }
+
+    @Transactional
+    @Override
+    public UUID payBill(String fromAccountNumber, String billerCode, String currency, double amount) {
+        if (fromAccountNumber.startsWith("999")) {
+            throw new AccountBlockedException(fromAccountNumber);
+        }
+
+        if (billerCode.toUpperCase().startsWith("CASH_ONLY")) {
+            throw new InvalidBillerException(billerCode);
+        }
+
+        var fromAccount = bankAccountRepository.findByAccountNumber(fromAccountNumber);
+        if (fromAccount == null) {
+            throw new AccountNotFoundException(fromAccountNumber);
+        }
+
+        var amountDecimal = new BigDecimal(amount);
+
+        if (fromAccount.getCurrentBalance().compareTo(amountDecimal) < 0) {
+            throw new InsufficientFundException(amount);
+        }
+
+        var now = OffsetDateTime.now();
+
+        var transaction = bankTransactionRepository.save(BankTransaction.builder()
+                .transactionUuid(UUID.randomUUID())
+                .accountUuid(fromAccount.getAccountUuid())
+                .transactionTimestamp(now)
+                .amount(amountDecimal)
+                .transactionType(TransactionType.TRANSACTION_TYPE_OUT.name())
+                .notes(String.format("Bill payment to %s with currency %s", billerCode, currency))
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+
+        return transaction.getTransactionUuid();
     }
 
 }

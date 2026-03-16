@@ -23,4 +23,6 @@ public interface BankService {
 
     int updateTransferStatus(UUID transferUuid, boolean isSuccess);
 
+    UUID payBill(String fromAccountNumber, String billerCode, String currency, double amount);
+
 }
